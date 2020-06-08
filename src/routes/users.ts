@@ -1,104 +1,105 @@
-import Router from 'koa-router'
-import User, { IUser } from '../models/user'
-import crypto from 'crypto'
-import { config } from '../config'
-import jwt from 'jsonwebtoken'
-import { Context, Next } from 'koa'
-import { Document } from 'mongoose'
+/* eslint-disable no-console */
+/* eslint-disable consistent-return */
 
-const generateHash = (password: string): string => {
-  return crypto.createHmac('sha1', config.salt).update(password).digest('hex')
-}
+import Router from 'koa-router';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import { Context, Next } from 'koa';
+import { Document } from 'mongoose';
+import { config } from '../config';
+import User, { IUser } from '../models/user';
+
+const generateHash = (password: string): string => crypto.createHmac('sha1', config.salt).update(password).digest('hex');
 
 const parseToken = async (ctx: Context, next: Next) => {
-  const auth = ctx.request.headers.authorization
-  console.log({ auth })
+  const auth = ctx.request.headers.authorization;
+  console.log({ auth });
   if (!auth) {
-    return await next()
+    return next();
   }
 
-  const token = auth.split('Bearer ')[1]
+  const token = auth.split('Bearer ')[1];
 
   // parse token
   if (token) {
-    let decoded = jwt.verify(token, config.jwtSecret)
+    const decoded = jwt.verify(token, config.jwtSecret);
 
     if (decoded) {
       // ***** TODO: remove 'as any' *****
-      let user = await User.findById((decoded as any).id)
-      ctx.state.currentUser = user
+      const user = await User.findById((decoded as any).id);
+      ctx.state.currentUser = user;
     }
   }
 
-  await next()
-}
+  await next();
+};
 
 const requireUser = async (ctx: Context, next: Next) => {
   if (!ctx.state.currentUser) {
-    ctx.status = 401
+    ctx.status = 401;
     ctx.body = {
       message: 'Unauthorized',
-    }
+    };
   } else {
-    await next()
+    await next();
   }
-}
+};
 
 const router = new Router({
   prefix: '/users',
-})
+});
 
 // Get All Users
 router.get('/', async (ctx: Context) => {
   try {
-    let users = await User.find()
-    ctx.body = users
+    const users = await User.find();
+    ctx.body = users;
   } catch (err) {
-    ctx.body = err
+    ctx.body = err;
   }
-})
+});
 
 // Create User
 router.post('/', async (ctx: Context) => {
   try {
-    let { password } = ctx.request.body
-    let hashedPassword = generateHash(password)
-    ctx.request.body.password = hashedPassword
+    const { password } = ctx.request.body;
+    const hashedPassword = generateHash(password);
+    ctx.request.body.password = hashedPassword;
 
-    let user = await User.create(ctx.request.body)
-    ctx.body = user
+    const user = await User.create(ctx.request.body);
+    ctx.body = user;
   } catch (err) {
-    ctx.body = err
+    ctx.body = err;
   }
-})
+});
 
 // Update own information
 router.patch('/', parseToken, requireUser, async (ctx: Context) => {
-  let body: { name?: string; password?: string } = ctx.request.body
-  let user: IUser & Document = ctx.state.currentUser
+  const { body } = ctx.request;
+  const user: IUser & Document = ctx.state.currentUser;
 
   if (body.name) {
-    user.name = body.name
+    user.name = body.name;
   }
 
   if (body.password) {
-    const hashedPassword = generateHash(body.password)
-    user.password = hashedPassword
+    const hashedPassword = generateHash(body.password);
+    user.password = hashedPassword;
   }
 
-  await user.save()
-  ctx.body = user
-})
+  await user.save();
+  ctx.body = user;
+});
 
 // Get Single User by Id
 router.get('/:id', parseToken, requireUser, async (ctx: Context) => {
-  let user = await User.findById(ctx.params.id)
+  const user = await User.findById(ctx.params.id);
   if (user) {
-    ctx.body = user
+    ctx.body = user;
   } else {
-    ctx.status = 404
-    ctx.body = 'User does not exist'
+    ctx.status = 404;
+    ctx.body = 'User does not exist';
   }
-})
+});
 
-export default router
+export default router;

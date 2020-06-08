@@ -1,14 +1,16 @@
-import Router from 'koa-router'
-const router = new Router()
+/* eslint-disable no-console */
+import Router from 'koa-router';
+
+const router = new Router();
 
 router.get('/ping', async (ctx) => {
   try {
     ctx.body = {
       status: 'success',
-    }
+    };
   } catch (err) {
-    console.error(err)
+    console.error(err);
   }
-})
+});
 
-export default router
+export default router;
